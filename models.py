@@ -1,64 +1,189 @@
-from django.db import models
+from django.contrib.auth.models         import User
+from django.contrib.modelhistory.config import debug_mode
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes        import generic
+from django.db                          import models
 
-class TestModel(models.Model):
+from datetime import datetime
+import cPickle as Pickle
+
+
+CHANGE_TYPES = (
+    ('A', 'Added'),
+    ('U', 'Updated'),
+    ('D', 'Deleted'),
+    ('R', 'Reverted'),
+)
+
+class ChangeLogManager(models.Manager):
     """
+    Exposes common operations on the collection of
+    all revisioned objects (ChangeLog instances).
     """
 
-    unit_price = models.DecimalField(max_digits=9,decimal_places=3)
+    def get_version(self, object, rev):
+        """
+        Returns a ChangeLog instance that corresponds
+        to the stored object 'object' at revision
+        'rev'.
 
-    class History:
-        pass
+        If no match is found, returns None.
+        """
 
-    def __str__(self):
-        string = "TestModel object: \n"
-        string = string + "*             id: %s\n" % (self.id)
-        string = string + "*     unit_price: %s\n" % (self.unit_price)
+        ct = ContentType.objects.get_for_model(object)
 
-        return string
+        try:
+            return self.get_query_set().filter(\
+                content_type=ct.id).filter(\
+                object_id=object.id).get(\
+                revision=rev)
+
+        except ChangeLog.DoesNotExist, e:
+            return None
+
+    def get_version_by_date(self, object, date):
+        """ 
+        Returns a list of revisions of object having
+        occured at date.
+
+        If no matches are found, returns an empty list.
+        """
+
+        ct = ContentType.objects.get_for_model(object)
+        revisions = self.get_query_set().filter(
+                        content_type=ct.id).filter(
+                        change_time__exact=date)
+
+        if len(history) > 0:
+            return revisions
+        else:
+            return list()
+
+    def get_history(self, object, offset=0):
+        """ 
+        Returns the last 'offset' revision(s) of object.
+
+        If offset is not supplied, a list of all
+        the revisions of object are returned.
+
+        If no matches are found, return an empty list.
+        """
+        
+        ct      = ContentType.objects.get_for_model(object)
+        history = self.get_query_set().filter(\
+                      content_type=ct.id).filter(\
+                      object_id=object.id)
+
+        if len(history) > 0 and len(history) > offset:
+            return history[(-1*offset):]
+        elif len(history) <= offset:
+            return history
+        else:
+            return list()
+
+    def set_version(self, object, rev):
+        """
+        Restores object given by 'object' with the stored
+        instance given by a ChangeLog object with matching
+        content_type, object_id and revision 'rev'.
+        """
+
+        ct = ContentType.objects.get_for_model(object)
+        return self.__revert_to_version(ct,object.id,rev)
+
+    def restore_version(self, content_type, object_id, rev):
+        """
+        Restores a previously deleted object by resurrecting
+        the state of the object at revision from a stored
+        object instance.
+        """
+
+        return self.__revert_to_version(content_type,object_id,rev)
+
+    def __revert_to_version(self, ctype, obj_id, rev):
+        """
+        Private method that handles the details of restoring
+        an object given by (content_type,object_id) using
+        serialized object instances.
+        """
+
+        try:
+            # Reload stored object at revision 'rev'
+            revertFrom = self.get_query_set().filter(\
+                content_type=ctype.id).filter(\
+                object_id=obj_id).get(\
+                revision=rev)
+            revertObject = Pickle.loads(revertFrom.object)
+            revertObject.save()
+
+            # Denote revert source revision
+            logs = ChangeLog.objects.filter(\
+                content_type=ctype.id).filter(\
+                object_id=obj_id)
+            latestRevision = logs[len(logs)-1]
+            latestRevision.revert_from = rev
+            latestRevision.change_type = 'R'
+            latestRevision.save()
+
+            return revertObject
+
+        except ChangeLog.DoesNotExist, e:
+            print "Requested revision does not exist: ", str(e)
+            return None
+
+        except Exception, e:
+            print "Exception in __revert_to_version: ", str(e)
+            return None
+
+class ChangeLog(models.Model):
+    """
+    Implements simple revision control for Django models. Maintains
+    serialized copies of all object instances by employing Django signals.
+
+    Performs bookkeeping on all calls to save() and delete().
+    """
+
+    change_time  = models.DateTimeField (_('Time of Change'), auto_now=True)
+    content_type = models.ForeignKey(ContentType)
+    parent       = generic.GenericForeignKey()
+    object_id    = models.IntegerField(_('Object ID'))
+    user         = models.ForeignKey(User, default="1")
+    change_type  = models.CharField(maxlength=1, choices=CHANGE_TYPES)
+    object       = models.TextField()
+    revision     = models.PositiveIntegerField()
+    revert_from  = models.PositiveIntegerField(default=0)
+
+    objects      = ChangeLogManager()
 
     class Meta:
-        db_table = 'test_model'
-
+        verbose_name = _('Change Log Entry')
+        verbose_name_plural = _('Change Log Entries')
+        db_table = _('django_history_log')
+    
     class Admin:
-        pass
+        date_hierarchy = 'change_time'
+        list_filter = ['change_time',  'change_type', 'content_type']
+        fields = (
+            ('Meta info', {'fields': ('change_time', 'content_type', 'object_id', 'user', 'revision', 'revert_from'),}),
+            ('Object', {'fields': ('object',),}),
+            )
 
-class TestModel2(models.Model):
-    """
-    """
-
-    dummy = models.IntegerField()
+        list_display = ('__str__', 'user', 'change_type', 'content_type', 'change_time', 'revision', 'revert_from')
 
     def __str__(self):
-        string = "TestModel object: \n"
-        string = string + "*             id: %s\n" % (self.id)
-        string = string + "*          dummy: %s\n" % (self.dummy)
+        return "ChangeLog: " + str(self.get_object())
 
-        return string
+    def get_object(self):
+        """
+        Returns unpickled object.
+        """
 
-    class Meta:
-        db_table = 'test_model2'
+        return Pickle.loads(self.object)
 
-    class Admin:
-        pass
+    def get_revision(self):
+        """
+        Returns the revision number of ChangeLog
+        entry's stored object.
+        """
 
-class TestModel3(models.Model):
-    """
-    """
-
-    dummy = models.IntegerField()
-
-    def __str__(self):
-        string = "TestModel object: \n"
-        string = string + "*             id: %s\n" % (self.id)
-        string = string + "*          dummy: %s\n" % (self.dummy)
-
-        return string
-
-    class Meta:
-        db_table = 'test_model3'
-
-    class Admin:
-        pass
-
-    class History:
-        pass
+        return self.revision
