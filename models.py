@@ -3,6 +3,7 @@ from django.contrib.modelhistory.config import debug_mode
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes        import generic
 from django.db                          import models
+from django.utils.translation           import ugettext
 
 from datetime import datetime
 import cPickle as Pickle
@@ -143,12 +144,12 @@ class ChangeLog(models.Model):
     Performs bookkeeping on all calls to save() and delete().
     """
 
-    change_time  = models.DateTimeField (_('Time of Change'), auto_now=True)
+    change_time  = models.DateTimeField (ugettext('Time of Change'), auto_now=True)
     content_type = models.ForeignKey(ContentType)
     parent       = generic.GenericForeignKey()
-    object_id    = models.IntegerField(_('Object ID'))
+    object_id    = models.IntegerField(ugettext('Object ID'))
     user         = models.ForeignKey(User, default="1")
-    change_type  = models.CharField(maxlength=1, choices=CHANGE_TYPES)
+    change_type  = models.CharField(max_length=1, choices=CHANGE_TYPES)
     object       = models.TextField()
     revision     = models.PositiveIntegerField()
     revert_from  = models.PositiveIntegerField(default=0)
@@ -156,21 +157,11 @@ class ChangeLog(models.Model):
     objects      = ChangeLogManager()
 
     class Meta:
-        verbose_name = _('Change Log Entry')
-        verbose_name_plural = _('Change Log Entries')
-        db_table = _('django_history_log')
-    
-    class Admin:
-        date_hierarchy = 'change_time'
-        list_filter = ['change_time',  'change_type', 'content_type']
-        fields = (
-            ('Meta info', {'fields': ('change_time', 'content_type', 'object_id', 'user', 'revision', 'revert_from'),}),
-            ('Object', {'fields': ('object',),}),
-            )
+        verbose_name = ugettext('Change Log Entry')
+        verbose_name_plural = ugettext('Change Log Entries')
+        db_table = ugettext('django_history_log')
 
-        list_display = ('__str__', 'user', 'change_type', 'content_type', 'change_time', 'revision', 'revert_from')
-
-    def __str__(self):
+    def __unicode__(self):
         return "ChangeLog: " + str(self.get_object())
 
     def get_object(self):
@@ -178,7 +169,7 @@ class ChangeLog(models.Model):
         Returns unpickled object.
         """
 
-        return Pickle.loads(self.object)
+        return Pickle.loads( str(self.object))
 
     def get_revision(self):
         """
