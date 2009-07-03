@@ -3,6 +3,7 @@ from django.db.models                   import signals
 from django.contrib.contenttypes        import generic
 from django.contrib.modelhistory.config import debug_mode
 from datetime                           import datetime
+from django.core.serializer              import serialize
 
 import cPickle as Pickle
 import inspect
@@ -81,6 +82,7 @@ def new_revision(sender, instance, signal, signal_name, *args, **kwargs):
                 log = ChangeLog(parent=instance, change_type='D',\
                                 revision=len(totalRevisions)+1)
                 log.object = Pickle.dumps(None)
+                #log.object = serialize('json', )
                 log.user = user
                 log.save()
 

@@ -4,9 +4,9 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes        import generic
 from django.db                          import models
 from django.utils.translation           import ugettext
-
+from django.core.serializer              import serialize, deserialize 
 from datetime import datetime
-import cPickle as Pickle
+#import cPickle as Pickle
 
 
 CHANGE_TYPES = (
@@ -114,7 +114,8 @@ class ChangeLogManager(models.Manager):
                 content_type=ctype.id).filter(\
                 object_id=obj_id).get(\
                 revision=rev)
-            revertObject = Pickle.loads(revertFrom.object)
+            #revertObject = Pickle.loads(revertFrom.object)
+            revertObject = deserialize('json', reverFrom.object)
             revertObject.save()
 
             # Denote revert source revision
@@ -143,7 +144,7 @@ class ChangeLog(models.Model):
 
     Performs bookkeeping on all calls to save() and delete().
     """
-
+    
     change_time  = models.DateTimeField (ugettext('Time of Change'), auto_now=True)
     content_type = models.ForeignKey(ContentType)
     parent       = generic.GenericForeignKey()
@@ -168,8 +169,8 @@ class ChangeLog(models.Model):
         """
         Returns unpickled object.
         """
-
-        return Pickle.loads( str(self.object))
+        #return Pickle.loads( str(self.object))
+        return serialize('json', self.object )
 
     def get_revision(self):
         """
@@ -178,3 +179,37 @@ class ChangeLog(models.Model):
         """
 
         return self.revision
+
+    def get_field_dict(self):
+        """
+        Returns a dictionary mapping field names to field values in this version
+        of the model.
+        
+        This method will follow parent links, if present.
+
+        Borrowed from django-reversion (http://code.google.com/p/django-reversion/)
+        """
+        if not hasattr(self, "_field_dict_cache"):
+            object_version = self.object_version
+            obj = object_version.object
+            result = {}
+            for field in obj._meta.fields:
+                result[field.name] = field.value_from_object(obj)
+            result.update(object_version.m2m_data)
+            # Add parent data.
+            for parent_class, field in obj._meta.parents.items():
+                content_type = ContentType.objects.get_for_model(parent_class)
+                parent_id = unicode(getattr(obj, field.attname))
+                try:
+                    parent_version = Version.objects.get(revision__id=self.revision_id,
+                                                         content_type=content_type,
+                                                         object_id=parent_id)
+                except parent_class.DoesNotExist:
+                    pass
+                else:
+                    result.update(parent_version.get_field_dict())
+            setattr(self, "_field_dict_cache", result)
+        return getattr(self, "_field_dict_cache")
+       
+    field_dict = property(get_field_dict,
+                          doc="A dictionary mapping field names to field values in this version of the model.")
