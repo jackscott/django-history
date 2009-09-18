@@ -1,5 +1,6 @@
 from django.contrib import admin
-from django.contrib.modelhistory.models import ChangeLog
+#from django.contrib.modelhistory.models import ChangeLog
+from django_history.models import ChangeLog
 
 class ChangeLogAdmin(admin.ModelAdmin):
     date_hierarchy = 'change_time'
