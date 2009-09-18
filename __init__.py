@@ -1,7 +1,8 @@
 from django.dispatch                    import dispatcher
 from django.db.models                   import signals
 from django.contrib.contenttypes        import generic
-from django.contrib.modelhistory.config import debug_mode
+#from django.contrib.modelhistory.config import debug_mode
+from django_history.config import debug_mode
 from datetime                           import datetime
 
 import cPickle as Pickle
@@ -40,7 +41,8 @@ def new_revision(sender, instance, signal, signal_name, *args, **kwargs):
     """
 
     from django.contrib.contenttypes.models import ContentType
-    from django.contrib.modelhistory.models import ChangeLog
+    #from django.contrib.modelhistory.models import ChangeLog
+    from django_history.models import ChangeLog
     from django.contrib.auth.models         import User
 
 
