@@ -130,11 +130,11 @@ class ChangeLogManager(models.Manager):
             return revertObject
 
         except ChangeLog.DoesNotExist, e:
-            print "Requested revision does not exist: ", str(e)
+            #print "Requested revision does not exist: ", str(e)
             return None
 
         except Exception, e:
-            print "Exception in __revert_to_version: ", str(e)
+            #print "Exception in __revert_to_version: ", str(e)
             return None
 
 class ChangeLog(models.Model):

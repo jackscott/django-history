@@ -2,7 +2,7 @@ from django.dispatch                    import dispatcher
 from django.db.models                   import signals
 from django.contrib.contenttypes        import generic
 #from django.contrib.modelhistory.config import debug_mode
-from django_history.config import debug_mode
+#from django_history.config import debug_mode
 from datetime                           import datetime
 
 import cPickle as Pickle
@@ -49,14 +49,14 @@ def new_revision(sender, instance, signal, signal_name, *args, **kwargs):
     # Allow Only Revisioned Models
     if instance.__class__.__name__ is 'ChangeLog' or not hasattr(instance, 'History'): 
         if debug_mode:
-            print "Type %s is not configured to be a revisioned model." %\
-                  (instance.__class__.__name__)
+            #print "Type %s is not configured to be a revisioned model." %\
+            #      (instance.__class__.__name__)
         return 0
 
     # Determine User
     user = snoop_the_call_chain()
     if user:
-        print "AUDIT: User Account %s initiated model mutation." % (str(user))
+        #print "AUDIT: User Account %s initiated model mutation." % (str(user))
     else:
         try:
             user = User.objects.get(username="audit")
@@ -87,9 +87,9 @@ def new_revision(sender, instance, signal, signal_name, *args, **kwargs):
                 log.save()
 
             except Exception, e:
-                print "Saving new revision failed for object type %s: %s" %\
-                      (instance.__class__.__name__,str(e))
-
+                ##print "Saving new revision failed for object type %s: %s" %\
+                #      (instance.__class__.__name__,str(e))
+                pass
         elif signal_name is 'post_save':
 
             try:
@@ -106,15 +106,15 @@ def new_revision(sender, instance, signal, signal_name, *args, **kwargs):
                 log.save()
 
             except Exception, e:
-                print "Saving new revision failed for object type %s: %s" %\
-                      (instance.__class__.__name__,str(e))
-
+                #print "Saving new revision failed for object type %s: %s" %\
+                #(instance.__class__.__name__,str(e))
+                pass
         else:
             # NOTE: In general, should be because instance is without an ID.
-            print "Type %s is cannot be(become) a revisioned model: Model "+\
-                  "has None id (default primary key)." %\
-                  (instance.__class__.__name__)
-
+            #print "Type %s is cannot be(become) a revisioned model: Model "+\
+            #      "has None id (default primary key)." %\
+            #      (instance.__class__.__name__)
+            pass
     except Exception, e:
         raise("Exception in save_new_revision: %s" %(str(e)))
         
@@ -142,9 +142,9 @@ def snoop_the_call_chain():
 
         # Ensure that we have a callee for the save methods
         # which we're auditing.
-        if debug_mode: print "Desired Frame: (%d)\n" % (desiredFrameCount+1)
+        #if debug_mode: print "Desired Frame: (%d)\n" % (desiredFrameCount+1)
         if desiredFrameCount >= len(ancestors):
-            if debug_mode: print "No callee in call chain for save method. Bailing ..."
+            #if debug_mode: print "No callee in call chain for save method. Bailing ..."
             return None
 
         desiredFrame = ancestors[desiredFrameCount+1][0]
@@ -154,16 +154,16 @@ def snoop_the_call_chain():
 
                     dictionary = dict(value)
                     count = 1
-                    if debug_mode: print "=========== Begin Frame Objects ==============="
+                    #if debug_mode: print "=========== Begin Frame Objects ==============="
                     for key,val in dictionary.items():
-                        if debug_mode: print "   (%d) %s: %s" % (count,key,val)
+                        #if debug_mode: print "   (%d) %s: %s" % (count,key,val)
                         count = count + 1
                     if debug_mode: print "============ End Frame Objects ================\n"
                        
                     if 'request' in dictionary.keys() and\
                            dictionary['request'].user:
                             
-                        if debug_mode: print "*** Found Calling User ***"
+                        #if debug_mode: print "*** Found Calling User ***"
                         return dictionary['request'].user
 
     finally:
@@ -179,5 +179,5 @@ signals.post_save.connect(new_revision_save)
 #dispatcher.connect( new_revision_delete, signal=signals.pre_delete )
 signals.pre_delete.connect(new_revision_delete)
 if debug_mode:
-    print "Attaching %s to signals.post_save" % (new_revision_save)
-    print "Attaching %s to signals.pre_delete" % (new_revision_delete)
+    #print "Attaching %s to signals.post_save" % (new_revision_save)
+    #print "Attaching %s to signals.pre_delete" % (new_revision_delete)
