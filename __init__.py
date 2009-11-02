@@ -175,6 +175,6 @@ def snoop_the_call_chain():
 signals.post_save.connect(new_revision_save)
 #dispatcher.connect( new_revision_delete, signal=signals.pre_delete )
 signals.pre_delete.connect(new_revision_delete)
-if debug_mode:
-    #print "Attaching %s to signals.post_save" % (new_revision_save)
-    #print "Attaching %s to signals.pre_delete" % (new_revision_delete)
+#if debug_mode:
+#print "Attaching %s to signals.post_save" % (new_revision_save)
+#print "Attaching %s to signals.pre_delete" % (new_revision_delete)
