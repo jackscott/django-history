@@ -52,18 +52,18 @@ def new_revision(sender, instance, signal, signal_name, *args, **kwargs):
 
     # Determine User
     user = snoop_the_call_chain()
-    if user:
-        #print "AUDIT: User Account %s initiated model mutation." % (str(user))
-    else:
-        try:
-            user = User.objects.get(username="audit")
-        except User.DoesNotExist:
-            user = User(username="audit",\
-                        first_name="Auditing",\
-                        last_name="Account",\
-                        email="audit@foobar.com")
-            user.set_password('password')
-            user.save()
+    #if user:
+    #print "AUDIT: User Account %s initiated model mutation." % (str(user))
+    #else:
+    try:
+        user = User.objects.get(username="audit")
+    except User.DoesNotExist:
+        user = User(username="audit",\
+                    first_name="Auditing",\
+                    last_name="Account",\
+                    email="audit@foobar.com")
+        user.set_password('password')
+        user.save()
 
     # Handle Accounting
     try:
