@@ -48,9 +48,6 @@ def new_revision(sender, instance, signal, signal_name, *args, **kwargs):
 
     # Allow Only Revisioned Models
     if instance.__class__.__name__ is 'ChangeLog' or not hasattr(instance, 'History'): 
-        if debug_mode:
-            #print "Type %s is not configured to be a revisioned model." %\
-            #      (instance.__class__.__name__)
         return 0
 
     # Determine User
