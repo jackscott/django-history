@@ -1,0 +1,14 @@
+# requires itself
+-e .
+
+# Runtime dependencies
+Django
+
+# Testing
+coverage
+django-discover-runner
+flake8
+
+# Documentation
+Sphinx
+

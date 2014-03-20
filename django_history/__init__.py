@@ -1,12 +1,11 @@
-from django.dispatch                    import dispatcher
-from django.db.models                   import signals
-from django.contrib.contenttypes        import generic
-#from django.contrib.modelhistory.config import debug_mode
-#from django_history.config import debug_mode
-from datetime                           import datetime
-
-import cPickle as Pickle
+import datetime
 import inspect
+import cPickle as pickle
+
+from django.dispatch import dispatcher
+from django.db.models import signals
+from django.contrib.contenttypes import generic
+
 
 
 def new_revision_save(sender, instance, signal, *args, **kwargs):
@@ -55,9 +54,9 @@ def new_revision(sender, instance, signal, signal_name, *args, **kwargs):
     try:
         user = User.objects.get(username="audit")
     except User.DoesNotExist:
-        user = User(username="audit",\
-                    first_name="Auditing",\
-                    last_name="Account",\
+        user = User(username="audit",
+                    first_name="Auditing",
+                    last_name="Account",
                     email="audit@foobar.com")
         user.set_password('password')
         user.save()
@@ -67,16 +66,16 @@ def new_revision(sender, instance, signal, signal_name, *args, **kwargs):
             
         # Calculate the number of current revision entries for this object.
         contentType    = ContentType.objects.get_for_model(instance)
-        totalRevisions = ChangeLog.objects.filter(object_id=instance.id).filter(\
+        totalRevisions = ChangeLog.objects.filter(object_id=instance.id).filter(
                                                       content_type=contentType)
 
         if signal_name is 'pre_delete':
 
             try:
 
-                log = ChangeLog(parent=instance, change_type='D',\
+                log = ChangeLog(parent=instance, change_type='D',
                                 revision=len(totalRevisions)+1)
-                log.object = Pickle.dumps(None)
+                log.object = pickle.dumps(None)
                 log.user = user
                 log.save()
 
@@ -87,13 +86,13 @@ def new_revision(sender, instance, signal, signal_name, *args, **kwargs):
             try:
 
                 if len(totalRevisions) == 0:
-                    log = ChangeLog(parent=instance, change_type='A',\
+                    log = ChangeLog(parent=instance, change_type='A',
                                     revision=1)
                 else:
-                    log = ChangeLog(parent=instance, change_type='U',\
+                    log = ChangeLog(parent=instance, change_type='U',
                                     revision=len(totalRevisions)+1)
 
-                log.object = Pickle.dumps(instance)
+                log.object = pickle.dumps(instance)
                 log.user = user
                 log.save()
 
@@ -136,14 +135,13 @@ def snoop_the_call_chain():
         if inspect.isframe(desiredFrame):
             for name,value in inspect.getmembers(desiredFrame):
                 if name == "f_locals":
-
                     dictionary = dict(value)
                     count = 1
                     for key,val in dictionary.items():
                         count = count + 1
                        
-                    if 'request' in dictionary.keys() and\
-                           dictionary['request'].user:
+                    if ('request' in dictionary.keys() 
+                        and dictionary['request'].user):
                             
                         return dictionary['request'].user
 
@@ -154,8 +152,5 @@ def snoop_the_call_chain():
 #
 # SIGNAL HANDLER BINDINGS
 #
-
-#dispatcher.connect( new_revision_save,   signal=signals.post_save )
 signals.post_save.connect(new_revision_save)
-#dispatcher.connect( new_revision_delete, signal=signals.pre_delete )
 signals.pre_delete.connect(new_revision_delete)

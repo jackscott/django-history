@@ -1,0 +1,4 @@
+include README.rst
+recursive-include django_history/static *
+recursive-include django_history/templates *
+recursive-include docs *

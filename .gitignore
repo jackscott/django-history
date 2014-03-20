@@ -1,1 +1,4 @@
 *.py[co]
+django_history.egg-info
+build
+dist

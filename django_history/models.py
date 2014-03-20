@@ -35,9 +35,9 @@ class ChangeLogManager(models.Manager):
         ct = ContentType.objects.get_for_model(object)
 
         try:
-            return self.get_query_set().filter(\
-                content_type=ct.id).filter(\
-                object_id=object.id).get(\
+            return self.get_query_set().filter(
+                content_type=ct.id).filter(
+                object_id=object.id).get(
                 revision=rev)
 
         except ChangeLog.DoesNotExist, e:
@@ -72,8 +72,8 @@ class ChangeLogManager(models.Manager):
         """
         
         ct      = ContentType.objects.get_for_model(object)
-        history = self.get_query_set().filter(\
-                      content_type=ct.id).filter(\
+        history = self.get_query_set().filter(
+                      content_type=ct.id).filter(
                       object_id=object.id)
 
         if len(history) > 0 and len(history) > offset:
@@ -111,16 +111,16 @@ class ChangeLogManager(models.Manager):
 
         try:
             # Reload stored object at revision 'rev'
-            revertFrom = self.get_query_set().filter(\
-                content_type=ctype.id).filter(\
-                object_id=obj_id).get(\
+            revertFrom = self.get_query_set().filter(
+                content_type=ctype.id).filter(
+                object_id=obj_id).get(
                 revision=rev)
             revertObject = Pickle.loads(revertFrom.object)
             revertObject.save()
 
             # Denote revert source revision
-            logs = ChangeLog.objects.filter(\
-                content_type=ctype.id).filter(\
+            logs = ChangeLog.objects.filter(
+                content_type=ctype.id).filter(
                 object_id=obj_id)
             latestRevision = logs[len(logs)-1]
             latestRevision.revert_from = rev
